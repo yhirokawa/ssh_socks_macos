@@ -1,0 +1,63 @@
+#! /bin/bash
+
+#
+# MIT License
+# 
+# Copyright (c) 2020 Yuta Hirokawa
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+abspath=$(cd $(dirname $0) && pwd)/$(basename $0)
+basedir=$(dirname $abspath)
+
+proxy_server=""
+if [ $# -ne 1 ]; then
+  if [ -e ${basedir}/.default_proxy_server ]; then
+    proxy_server=$(cat ${basedir}/.default_proxy_server)
+  else
+    echo "[Usage] $0 <proxy server name>"
+    exit 1
+  fi
+else
+  proxy_server="$1"
+fi
+echo "Proxy server: ${proxy_server}"
+
+DEVICE=`search-connected-network-device`
+if [ $? -ne 0 ]; then
+  echo "Not found: enabled network device"
+  exit 1
+fi
+
+SOCKS_PORT=10080
+
+USED_PORT=`ps ux | grep '[s]sh.*-D' | grep -o '\-D [0-9]*' | cut -d' ' -f 2`
+if [ "x${USED_PORT}" != "x" ]; then
+  echo "Warning: always connected via SOCKS proxy"
+else
+  ssh -Nf -D ${SOCKS_PORT} ${proxy_server}
+  if [ $? -ne 0 ]; then
+    echo "Connection refused"
+    exit 1
+  fi
+  USED_PORT=${SOCKS_PORT}
+fi
+networksetup -setsocksfirewallproxy ${DEVICE} localhost ${USED_PORT}
+networksetup -setsocksfirewallproxystate ${DEVICE} on
