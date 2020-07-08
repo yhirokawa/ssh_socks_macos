@@ -31,4 +31,4 @@ if [ $? -ne 0 ]; then
 fi
 
 ps ux | grep "[s]sh.*-D" | sed -E 's/[\t ]+/ /g' | cut -d' ' -f2 | xargs kill
-networksetup -setsocksfirewallproxystate ${DEVICE} off
+networksetup -setsocksfirewallproxystate "${DEVICE}" off
